@@ -7,7 +7,8 @@ import {
   Attribute,
   ElementRef,
   Renderer,
-  Optional
+  Optional,
+  Input
 } from 'angular2/core';
 import {Instruction, RouterLink} from 'angular2/router';
 
@@ -22,11 +23,10 @@ import {Instruction, RouterLink} from 'angular2/router';
  * ```
  */
 @Directive({
-  selector: '[router-active], [routerActive]',
-  inputs: ['routerActive']
+  selector: '[router-active], [routerActive]'
 })
 export class RouterActive {
-  routerActive: string = null;
+  @Input() routerActive: string = null;
   routerActiveAttr: string = 'active';
 
   constructor(
@@ -50,7 +50,7 @@ export class RouterActive {
     });
   }
 
-  private _findRootRouter(): Router{
+  private _findRootRouter(): Router {
     var router: Router = this.router;
     while (isPresent(router.parent)) {
       router = router.parent;
@@ -58,7 +58,7 @@ export class RouterActive {
     return router;
   }
 
-  private _updateClass(){
+  private _updateClass() {
     let active = this.routerLink.first.isRouteActive;
     this.renderer.setElementClass(this.element.nativeElement, this._attrOrProp(), active);
   }

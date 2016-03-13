@@ -5,9 +5,10 @@ var helpers = require('./helpers');
 
 var CopyWebpackPlugin = require('copy-webpack-plugin');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
+var ForkCheckerPlugin = require('awesome-typescript-loader').ForkCheckerPlugin;
 
 var ENV = process.env.ENV = process.env.NODE_ENV = 'development';
-var HMR = process.argv.join('').indexOf('hot') > -1;
+var HMR = helpers.hasProcessFlag('hot');
 
 var metadata = {
   title: 'Angular2 Webpack Starter by @gdi2990 from @AngularClass',
@@ -19,17 +20,26 @@ var metadata = {
 };
 /*
  * Config
+ * with default values at webpack.default.conf
  */
-module.exports = helpers.validate({
+module.exports = {
   // static data for index.html
   metadata: metadata,
-  // for faster builds use 'eval'
-  devtool: 'source-map',
+  devtool: 'cheap-module-eval-source-map',
+  // cache: true,
   debug: true,
-  // cache: false,
+  // devtool: 'eval' // for faster builds use 'eval'
 
   // our angular app
-  entry: { 'polyfills': './src/polyfills.ts', 'main': './src/main.ts' },
+  entry: {
+    'polyfills': './src/polyfills.ts',
+    'vendor': './src/vendor.ts',
+    'app': './src/main.ts'
+  },
+
+  resolve: {
+    extensions: ['', '.ts', '.js']
+  },
 
   // Config for our build files
   output: {
@@ -37,10 +47,6 @@ module.exports = helpers.validate({
     filename: '[name].bundle.js',
     sourceMapFilename: '[name].map',
     chunkFilename: '[id].chunk.js'
-  },
-
-  resolve: {
-    extensions: ['', '.ts', '.async.ts', '.js']
   },
 
   module: {
@@ -51,7 +57,7 @@ module.exports = helpers.validate({
     ],
     loaders: [
       // Support for .ts files.
-      { test: /\.ts$/, loader: 'ts-loader', exclude: [ /\.(spec|e2e)\.ts$/ ] },
+      { test: /\.ts$/, loader: 'awesome-typescript-loader', exclude: [ /\.(spec|e2e)\.ts$/ ] },
 
       // Support for *.json files.
       { test: /\.json$/,  loader: 'json-loader' },
@@ -66,37 +72,43 @@ module.exports = helpers.validate({
   },
 
   plugins: [
+    new ForkCheckerPlugin(),
     new webpack.optimize.OccurenceOrderPlugin(true),
-    new webpack.optimize.CommonsChunkPlugin({ name: 'polyfills', filename: 'polyfills.bundle.js', minChunks: Infinity }),
+    new webpack.optimize.CommonsChunkPlugin({ name: ['app', 'vendor', 'polyfills'], minChunks: Infinity }),
     // static assets
     new CopyWebpackPlugin([ { from: 'src/assets', to: 'assets' } ]),
     // generating html
-    new HtmlWebpackPlugin({ template: 'src/index.html' }),
-    // replace
+    new HtmlWebpackPlugin({ template: 'src/index.html', chunksSortMode: 'none' }),
+    // Environment helpers (when adding more properties make sure you include them in custom-typings.d.ts)
     new webpack.DefinePlugin({
-      'process.env': {
-        'ENV': JSON.stringify(metadata.ENV),
-        'NODE_ENV': JSON.stringify(metadata.ENV),
-        'HMR': HMR
-      }
+      'ENV': JSON.stringify(metadata.ENV),
+      'HMR': HMR
     })
   ],
 
   // Other module loader config
+
+  // our Webpack Development Server config
   tslint: {
     emitErrors: false,
     failOnHint: false,
     resourcePath: 'src',
   },
-
-  // our Webpack Development Server config
   devServer: {
     port: metadata.port,
     host: metadata.host,
-    // contentBase: 'src/',
     historyApiFallback: true,
-    watchOptions: { aggregateTimeout: 300, poll: 1000 }
+    watchOptions: {
+      aggregateTimeout: 300,
+      poll: 1000
+    }
   },
-  // we need this due to problems with es6-shim
-  node: {global: 'window', progress: false, crypto: 'empty', module: false, clearImmediate: false, setImmediate: false}
-});
+  node: {
+    global: 'window',
+    process: true,
+    crypto: 'empty',
+    module: false,
+    clearImmediate: false,
+    setImmediate: false
+  }
+};
